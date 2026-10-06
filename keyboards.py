@@ -75,3 +75,16 @@ def get_course_detail_keyboard(course_id: str) -> InlineKeyboardMarkup:
             ]
         ]
     )
+
+
+def get_apply_course_selection_keyboard() -> InlineKeyboardMarkup:
+    """Ariza qoldirishda qaysi kursga yozilishini tanlash inline klaviaturasi"""
+    inline_keyboard = []
+    for cid, c in COURSES.items():
+        inline_keyboard.append([
+            InlineKeyboardButton(text=c["title"], callback_data=f"apply_course:{cid}")
+        ])
+    inline_keyboard.append([
+        InlineKeyboardButton(text="🎯 Umumiy maslahat (Barcha kurslar)", callback_data="apply_course:general")
+    ])
+    return InlineKeyboardMarkup(inline_keyboard=inline_keyboard)

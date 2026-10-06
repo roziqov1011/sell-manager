@@ -20,7 +20,8 @@ from keyboards import (
     get_main_reply_keyboard,
     get_contact_request_keyboard,
     get_courses_inline_keyboard,
-    get_course_detail_keyboard
+    get_course_detail_keyboard,
+    get_apply_course_selection_keyboard
 )
 
 logger = logging.getLogger(__name__)
@@ -128,14 +129,17 @@ async def advise_course(message: Message, bot: Bot):
 
 @router.message(F.text == "📞 Menejer bilan bog'lanish / Ariza")
 async def request_lead_contact(message: Message):
-    """Foydalanuvchidan telefon raqamini so'rash"""
+    """Foydalanuvchidan qaysi kursga yozilishini so'rash va telefon olish"""
     text = (
-        "📞 **Bepul konsultatsiya va darsga yozilish:**\n\n"
-        "Telefon raqamingizni qoldirsangiz, katta mutaxassisimiz 15 daqiqa ichida siz bilan "
-        "bog'lanadi, kurs dasturini taqdim etadi va siz uchun maxsus chegirma joyini band qiladi!\n\n"
-        "Pastdagi **'📱 Telefon raqamimni ulashish'** tugmasini bosing yoki raqamingizni yozib yuboring:"
+        "📞 **Kursga yozilish va Bepul konsultatsiya:**\n\n"
+        "Iltimos, avval o'zingiz qiziqqan **kurs yo'nalishini tanlang**:\n"
+        "(Mutaxassisimiz 15 daqiqa ichida bog'lanib, tanlangan kursingiz bo'yicha joy band qilib beradi!)"
     )
-    await message.answer(text, reply_markup=get_contact_request_keyboard(), parse_mode="Markdown")
+    await message.answer(
+        text,
+        reply_markup=get_apply_course_selection_keyboard(),
+        parse_mode="Markdown"
+    )
 
 
 @router.message(F.text == "❌ Bekor qilish")
@@ -222,18 +226,23 @@ async def handle_contact(message: Message, bot: Bot):
         phone = "+" + phone
 
     await db.update_user_phone(user.id, phone)
+
+    # Foydalanuvchi tanlagan kursini bazadan olish
+    selected_course = await db.get_user_selected_course(user.id) or "Umumiy ta'lim konsultatsiyasi"
+
     lead_id = await db.save_lead(
         user_id=user.id,
         full_name=contact.first_name + (f" {contact.last_name}" if contact.last_name else ""),
         phone_number=phone,
-        course_interest="Telegram Bot orqali ariza",
+        course_interest=selected_course,
         note=f"Username: @{user.username}" if user.username else ""
     )
 
     # Foydalanuvchiga professional javob
     success_text = (
         f"Ajoyib, **{contact.first_name}**! 🎉\n\n"
-        f"Raqamingiz qabul qilindi: `{phone}`\n\n"
+        f"🎯 Tanlangan kurs: **{selected_course}**\n"
+        f"📞 Raqamingiz qabul qilindi: `{phone}`\n\n"
         "Katta mutaxassisimiz 15 daqiqa ichida siz bilan bog'lanadi va:\n"
         "✅ Kurs dasturini to'liq taqdim etadi;\n"
         "✅ Bepul sinov darsiga kirish huquqini beradi;\n"
@@ -253,7 +262,8 @@ async def handle_contact(message: Message, bot: Bot):
             admin_msg = (
                 f"🚨 **Yangi Ariza (Lead #{lead_id})!**\n\n"
                 f"👤 Ism: {contact.first_name} {contact.last_name or ''}\n"
-                f"📞 Tel: {phone}\n"
+                f"🎯 Kurs: **{selected_course}**\n"
+                f"📞 Tel: `{phone}`\n"
                 f"🔗 Telegram: @{user.username or 'yoq'} (ID: `{user.id}`)\n"
             )
             await bot.send_message(chat_id=int(ADMIN_ID), text=admin_msg, parse_mode="Markdown")
@@ -270,6 +280,9 @@ async def handle_course_info(callback: CallbackQuery):
     if not course:
         await callback.answer("Kurs ma'lumotlari topilmadi.", show_alert=True)
         return
+
+    if course:
+        await db.set_user_selected_course(callback.from_user.id, course["title"])
 
     skills_text = "\n".join([f"• {s}" for s in course["skills"]])
     bonuses_text = "\n".join([f"🎁 {b}" for b in course["bonuses"]])
@@ -300,13 +313,19 @@ async def handle_course_info(callback: CallbackQuery):
 async def handle_apply_course(callback: CallbackQuery):
     """Muayyan kursga yozilish inline callback"""
     course_id = callback.data.split(":")[1]
-    course = get_course_by_id(course_id)
-    course_title = course["title"] if course else "Kurs"
+    if course_id == "general":
+        course_title = "🎯 Umumiy ta'lim maslahati / Barcha kurslar"
+    else:
+        course = get_course_by_id(course_id)
+        course_title = course["title"] if course else "Kurs"
+
+    # Foydalanuvchi tanlagan aniq kursni bazada saqlash
+    await db.set_user_selected_course(callback.from_user.id, course_title)
 
     text = (
-        f"🎯 Siz **{course_title}** kursiga yozilmoqchisiz!\n\n"
+        f"🎯 Siz **{course_title}** yo'nalishini tanladingiz!\n\n"
         "Bepul 1-darsga kirish va chegirma joyini band qilish uchun "
-        "pastdagi tugma orqali telefon raqamingizni yuboring:"
+        "pastdagi **'📱 Telefon raqamimni ulashish'** tugmasini bosing yoki raqamingizni yozib yuboring:"
     )
 
     await callback.message.answer(
@@ -314,7 +333,7 @@ async def handle_apply_course(callback: CallbackQuery):
         reply_markup=get_contact_request_keyboard(),
         parse_mode="Markdown"
     )
-    await callback.answer()
+    await callback.answer(f"{course_title} tanlandi!")
 
 
 @router.callback_query(F.data.startswith("ask_ai:"))
@@ -356,19 +375,34 @@ async def handle_user_text(message: Message, bot: Bot):
     if phone_match and len(user_text) < 40:
         phone_number = phone_match.group(0)
         await db.update_user_phone(user_id, phone_number)
-        await db.save_lead(
+        selected_course = await db.get_user_selected_course(user_id) or "Matnda telefon qoldirilgan"
+        lead_id = await db.save_lead(
             user_id=user_id,
             full_name=message.from_user.first_name,
             phone_number=phone_number,
-            course_interest="Matnda yuborilgan raqam",
+            course_interest=selected_course,
             note=user_text
         )
         response_text = (
-            f"Rahmat! Raqamingiz qabul qilindi: `{phone_number}` ✅\n\n"
-            "Tez orada katta mutaxassisimiz siz bilan bog'lanadi va barcha ma'lumotlarni beradi. "
-            "Yana biror narsa haqida bilishni xohlaysizmi?"
+            f"Rahmat, **{message.from_user.first_name}**! Raqamingiz qabul qilindi: `{phone_number}` ✅\n\n"
+            f"🎯 Tanlangan kurs: **{selected_course}**\n\n"
+            "Tez orada katta mutaxassisimiz siz bilan bog'lanadi va batafsil ma'lumot beradi. "
+            "Yana biror savolingiz bo'lsa, bemalol so'rashingiz mumkin!"
         )
         await message.answer(response_text, parse_mode="Markdown")
+
+        if ADMIN_ID:
+            try:
+                admin_msg = (
+                    f"🚨 **Yangi Ariza (Lead #{lead_id})!**\n\n"
+                    f"👤 Ism: {message.from_user.first_name}\n"
+                    f"🎯 Kurs: **{selected_course}**\n"
+                    f"📞 Tel: `{phone_number}`\n"
+                    f"🔗 Telegram: @{message.from_user.username or 'yoq'} (ID: `{user_id}`)\n"
+                )
+                await bot.send_message(chat_id=int(ADMIN_ID), text=admin_msg, parse_mode="Markdown")
+            except Exception as e:
+                logger.error(f"Admin xabarnomasi yuborilmadi: {e}")
         return
 
     # 2. Telegram 'typing' holatini ko'rsatish

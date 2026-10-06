@@ -50,6 +50,12 @@ async def init_db():
             )
         """)
 
+        # Foydalanuvchilar jadvaliga selected_course ustunini qo'shish (agar bo'lmasa)
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN selected_course TEXT")
+        except Exception:
+            pass
+
         await db.commit()
 
 
@@ -134,3 +140,22 @@ async def get_all_leads(limit: int = 20):
         """, (limit,)) as cursor:
             rows = await cursor.fetchall()
             return [dict(row) for row in rows]
+
+
+async def set_user_selected_course(user_id: int, course_title: str):
+    """Foydalanuvchi qiziqqan yoki tanlagan kursini saqlash"""
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        await db.execute("""
+            UPDATE users SET selected_course = ?, last_active = CURRENT_TIMESTAMP WHERE user_id = ?
+        """, (course_title, user_id))
+        await db.commit()
+
+
+async def get_user_selected_course(user_id: int) -> str | None:
+    """Foydalanuvchi tanlagan kursini olish"""
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        async with db.execute("SELECT selected_course FROM users WHERE user_id = ?", (user_id,)) as cursor:
+            row = await cursor.fetchone()
+            if row and row[0]:
+                return row[0]
+            return None
