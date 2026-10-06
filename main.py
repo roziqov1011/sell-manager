@@ -53,7 +53,11 @@ async def main():
     logger.info(f"Virtual Menejer: {MANAGER_NAME}")
     logger.info("Bot yangi xabarlarni tinglamoqda (Polling rejimida)...")
 
-    # 6. Eski xabarlarni (pending updates) o'tkazib yuborish va polling boshlash
+    # 6. Strands Decider 2B modelini orqa fonda oldindan tayyorlab qo'yish (pre-warm)
+    from decider_service import StrandsDeciderManager
+    asyncio.create_task(asyncio.to_thread(StrandsDeciderManager.get_engine))
+
+    # 7. Eski xabarlarni (pending updates) o'tkazib yuborish va polling boshlash
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 

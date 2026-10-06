@@ -23,6 +23,7 @@ from keyboards import (
     get_course_detail_keyboard,
     get_apply_course_selection_keyboard
 )
+from decider_service import analyze_user_message
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -408,17 +409,24 @@ async def handle_user_text(message: Message, bot: Bot):
     # 2. Telegram 'typing' holatini ko'rsatish
     await bot.send_chat_action(chat_id=message.chat.id, action="typing")
 
-    # 3. Oldingi suhbat tarixini bazadan olish
+    # 3. Strands Decider 2B modeli orqali niyat va qiziqqan kursni tahlil qilish
+    decider_info = await analyze_user_message(user_text)
+    if decider_info and decider_info.get("matched_course_title"):
+        # Agar mijoz ma'lum kursga qiziqayotgani aniqlansa, bazada unga kursni biriktiramiz
+        await db.set_user_selected_course(user_id, decider_info["matched_course_title"])
+
+    # 4. Oldingi suhbat tarixini bazadan olish
     history = await db.get_user_chat_history(user_id=user_id, limit=10)
 
-    # 4. Gemini AI orqali sotuv menejeri javobini olish
+    # 5. Gemini AI orqali sotuv menejeri javobini olish (Decider xulosalari bilan)
     ai_reply = await get_ai_sales_response(
         user_id=user_id,
         user_message=user_text,
-        chat_history=history
+        chat_history=history,
+        decider_info=decider_info
     )
 
-    # 5. Suhbatni bazaga saqlash
+    # 6. Suhbatni bazaga saqlash
     await db.save_message(user_id=user_id, role="user", text=user_text)
     await db.save_message(user_id=user_id, role="model", text=ai_reply)
 

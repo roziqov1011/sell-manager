@@ -51,10 +51,11 @@ SENING SOTUV STRATEGIYANG VA USLUBING:
 """
 
 
-async def get_ai_sales_response(user_id: int, user_message: str, chat_history: list = None) -> str:
+async def get_ai_sales_response(user_id: int, user_message: str, chat_history: list = None, decider_info: dict = None) -> str:
     """
     Foydalanuvchi xabariga Gemini AI orqali sotuv menejeri javobini olish.
     chat_history: [{"role": "user"|"model", "text": "..."}]
+    decider_info: Strands Decider 2B tomonidan aniqlangan niyat va lid harorati
     """
     if not GEMINI_API_KEY:
         return (
@@ -80,11 +81,25 @@ async def get_ai_sales_response(user_id: int, user_message: str, chat_history: l
         "parts": [{"text": user_message}]
     })
 
+    # Strands Decider 2B xulosalari asosida tizimli yo'riqnomani boyitish
+    system_text = SALES_MANAGER_SYSTEM_PROMPT
+    if decider_info:
+        insights = "\n\n=== REAL-TIME INTEL (STRANDS DECIDER 2B MODEL XULOSALARI) ===\n"
+        if decider_info.get("matched_course_title"):
+            insights += f"• Aniqlangan qiziqish yo'nalishi: {decider_info['matched_course_title']}\n"
+        if decider_info.get("is_objection"):
+            insights += "• DIQQAT: Mijozda e'tiroz (shubha, qimmatlik yoki vaqt) sezildi. E'tirozni professional tarzda yeching!\n"
+        if decider_info.get("is_lead_intent"):
+            insights += "• DIQQAT: Mijoz ro'yxatdan o'tish yoki sotib olishga yaqin (Yuqori lid). Bepul dars yoki kontakt qoldirishni taklif qiling!\n"
+        if decider_info.get("lead_warmth_score", 0) >= 1.5:
+            insights += "• HARORAT: 🔥 QAYNOQ MIJOZ! Xarid qarorini mustahkamlang.\n"
+        system_text += insights
+
     # Gemini so'rov tanasi (payload)
     payload = {
         "contents": contents,
         "systemInstruction": {
-            "parts": [{"text": SALES_MANAGER_SYSTEM_PROMPT}]
+            "parts": [{"text": system_text}]
         },
         "generationConfig": {
             "temperature": 0.7,
