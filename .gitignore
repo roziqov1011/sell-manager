@@ -1,0 +1,31 @@
+# Muhit o'zgaruvchilari (Xavfsizlik: API kalitlar va bot token)
+.env
+
+# Ma'lumotlar bazasi va shaxsiy ma'lumotlar
+*.db
+*.sqlite3
+bot_database.db
+
+# Eksport qilingan fayllar
+arizalar.xlsx
+*.xlsx
+*.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+
+# Muharrir va tizim fayllari
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+Desktop.ini
