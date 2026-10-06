@@ -6,35 +6,32 @@ Ushbu loyiha online ta'lim akademiyalari va o'quv markazlari uchun mo'ljallangan
 
 ## 🌟 Asosiy Xususiyatlari
 
-1. **🧠 Gemini AI integratsiyasi:**
-   - Google Gemini modeli orqali ishlaydi (`gemini-3.5-flash` va zaxirada `gemini-3.1-flash-lite`).
-   - Professional sotuvchi xarakteri (SPIN / Consultative selling texnikasi).
-   - O'zbek, Rus va boshqa tillarda erkin va ravon muloqot.
-   - Har bir javob oxirida aniq harakatga chaqiruv (Call to Action / Savol).
+1. **🧠 Gibrid AI Arxitekturasi (Strands Decider 2B + Google Gemini 3.5 Flash):**
+   - **Amazon Strands Decider 2B (Lokal Model):** Foydalanuvchi qaysi kursga qiziqayotganini (`frontend`, `backend`, `ai_data`, `design`, `marketing`), xarid niyatini va lid haroratini (sovuq, iliq, qaynoq) real vaqtda aniqlaydi.
+   - **Google Gemini 3.5 Flash (Bulutli LLM):** Tabiiy, samimiy va professional sotuvchi sifatida mukammal o'zbek tilida muloqot qiladi.
+   - **Tugallangan Javoblar:** `thinkingBudget: 0` va `maxOutputTokens: 4096` sozlamalari orqali javoblar hech qachon chala uzilmaydi.
 
 2. **🎓 Kurslar Bilimlar Bazasi (Knowledge Base):**
-   - Python & Backend Dasturlash (Django, FastAPI, Docker)
-   - Frontend & React Dasturlash
-   - Fullstack Web Dasturlash
-   - Data Science & Sun'iy Intellekt (AI)
-   - UI/UX & Grafik Dizayn
-   - SMM & Target Reklama
-   - Narxlar, oylik bo'lib to'lash (0% ustama), kafolatlar va bonuslar.
+   - 🐍 Python & Backend Dasturlash (Django, FastAPI, Docker)
+   - ⚛️ Frontend & React Dasturlash
+   - 🚀 Fullstack Web Dasturlash (Python + React)
+   - 🧠 Data Science & Sun'iy Intellekt (AI)
+   - 🎨 UI/UX & Grafik Dizayn
+   - 📱 SMM & Target Reklama
+   - Narxlar, oylik bo'lib to'lash (0% ustama), 14 kunlik kafolat va bonuslar.
 
-3. **💾 Xotira va Suhbat Tarixi (Conversation Memory):**
-   - SQLite ma'lumotlar bazasi (`bot_database.db`) orqali har bir foydalanuvchi bilan oxirgi muloqot xotirada saqlanadi.
-   - AI foydalanuvchi qaysi soha yoki tajribaga ega ekanligini eslab qoladi.
+3. **🎯 Kurslarni Avtomatik Kuzatish (Course Tracking):**
+   - Foydalanuvchi qaysi kursni ko'rsa yoki qaysi kurs haqida yozsa, bu ma'lumot uning profiliga biriktiriladi.
+   - Foydalanuvchi telefon raqamini yuborishi bilan, ro'yxatda u tanlagan **aniq kurs nomi** saqlanadi.
+
+4. **📊 Lidlar va Excel Eksport:**
+   - Foydalanuvchi telefonini bitta tugma orqali ulashishi mumkin (`📱 Telefon raqamimni ulashish`).
+   - Adminlar uchun `/leads` komandasi (chatda ko'rish) va `/export` yoki `/excel` komandasi orqali barcha arizalarni **Microsoft Excel (.xlsx)** formatida Telegramga yuklab olish imkoniyati.
+   - Yangi ariza kelganda adminga bir zumda xabarnoma boradi.
+
+5. **💾 Xotira va Suhbat Tarixi (Conversation Memory):**
+   - Asinxron SQLite ma'lumotlar bazasi (`bot_database.db`) orqali har bir foydalanuvchi suhbati saqlanadi.
    - Istalgan vaqtda "🔄 Yangi suhbat boshlash" tugmasi orqali xotirani tozalash mumkin.
-
-4. **📱 Sotuv Voronkasi va Lidlar (Lead Generation):**
-   - Foydalanuvchi bitta tugma orqali o'z telefon raqamini yuborishi mumkin (`📱 Telefon raqamimni ulashish`).
-   - Shuningdek, matn ichida yozilgan telefon raqamlarini ham avtomatik aniqlaydi va arizalar bazasiga saqlaydi.
-   - Adminlar uchun `/leads` komandasi orqali tushgan arizalar ro'yxatini ko'rish imkoniyati.
-
-5. **⚡ Asinxron va Ishonchli Arxitektura:**
-   - Aiogram 3.x va aiohttp asinxron kutubxonalari asosida qurilgan.
-   - Xabarlar kelganda Telegramda "yozmoqda..." (`typing`) animatsiyasi ko'rsatiladi.
-   - Model uzilishi yoki yuklama yuqori bo'lganda avtomatik fallback mexanizmi mavjud.
 
 ---
 
@@ -42,28 +39,39 @@ Ushbu loyiha online ta'lim akademiyalari va o'quv markazlari uchun mo'ljallangan
 
 ```
 sell-manager/
-├── .env                  # Telegram bot token va Gemini API kaliti
+├── .env                  # Telegram bot token, Gemini API kalit va Admin ID
+├── .env.example          # Namunaviy konfiguratsiya fayli
 ├── config.py             # Loyiha konfiguratsiyasi
 ├── courses_data.py       # Kurslar bazasi va ta'lim dasturlari
 ├── database.py           # SQLite ma'lumotlar bazasi (Users, Messages, Leads)
-├── ai_service.py         # Gemini AI Sales Manager tizimi
+├── decider_service.py    # Amazon Strands Decider 2B modeli integratsiyasi
+├── ai_service.py         # Google Gemini AI integratsiyasi
+├── export_leads.py       # Arizalarni Excel (.xlsx) ga eksport qilish
 ├── keyboards.py          # Reply va Inline tugmalar
-├── handlers.py           # Bot hodisalari va xabarlarni qayta ishlash
-├── main.py               # Botni ishga tushiruvchi asosiy fayl
+├── handlers.py           # Telegram hodisalari va xabarlar logikasi
+├── main.py               # Botni ishga tushiruvchi markaziy modul
+├── DOCUMENTATION.md      # To'liq texnik hujjat (Technical Documentation)
 ├── requirements.txt      # Kutubxonalar ro'yxati
 └── README.md             # Qo'llanma
 ```
 
 ---
 
+## 📖 To'liq Texnik Hujjat
+
+Loyiha arxitekturasi, ma'lumotlar bazasi jadvallari, AI modellarining ishlash mexanizmi va serverga deploy qilish bo'yicha to'liq ma'lumot olish uchun quyidagi hujjatni o'qing:
+👉 **[DOCUMENTATION.md](DOCUMENTATION.md)**
+
+---
+
 ## ⚙️ Sozlash va Ishga Tushirish
 
 ### 1. `.env` faylini tekshirish
-Loyihaning ildiz papkasidagi `.env` faylida kalitlar mavjudligiga ishonch hosil qiling:
+Loyihaning ildiz papkasidagi `.env` fayliga ma'lumotlarni kiriting:
 ```env
 gemini_api_key=Sizning_Gemini_API_Kalitingiz
 telegram_bot_token=Sizning_Telegram_Bot_Tokeningiz
-ADMIN_ID=Sizning_Telegram_ID_Raqamingiz  # Ixtiyoriy (arizalarni ko'rish uchun)
+ADMIN_ID=Sizning_Telegram_ID_Raqamingiz
 ```
 
 ### 2. Kutubxonalarni o'rnatish
@@ -76,4 +84,4 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Ishga tushgandan so'ng, Telegramda o'z botingizga kiring (masalan, `@rrtsellmanagerbot`) va `/start` buyrug'ini yuboring!
+Telegramda botingizga kiring (masalan: **[@rrtsellmanagerbot](https://t.me/rrtsellmanagerbot)**) va `/start` buyrug'ini bosing!
