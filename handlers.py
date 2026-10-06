@@ -430,10 +430,18 @@ async def handle_user_text(message: Message, bot: Bot):
     await db.save_message(user_id=user_id, role="user", text=user_text)
     await db.save_message(user_id=user_id, role="model", text=ai_reply)
 
-    # 6. Javobni foydalanuvchiga yuborish
-    try:
-        await message.answer(ai_reply, parse_mode="Markdown")
-    except Exception as e:
-        logger.warning(f"Markdown format xatosi: {e}. Oddiy matnda yuborilmoqda.")
-        # Agar Markdown formati xatolik keltirib chiqarsa, oddiy matnda yuborish
-        await message.answer(ai_reply, parse_mode=None)
+    # 7. Javobni foydalanuvchiga to'liq va uzilmasdan yuborish
+    if len(ai_reply) <= 4000:
+        try:
+            await message.answer(ai_reply, parse_mode="Markdown")
+        except Exception as e:
+            logger.warning(f"Markdown format xatosi: {e}. Oddiy matnda yuborilmoqda.")
+            await message.answer(ai_reply, parse_mode=None)
+    else:
+        # 4000 belgidan oshsa, qismlarga bo'lib to'liq yuborish
+        for i in range(0, len(ai_reply), 4000):
+            chunk = ai_reply[i:i+4000]
+            try:
+                await message.answer(chunk, parse_mode="Markdown")
+            except Exception:
+                await message.answer(chunk, parse_mode=None)

@@ -103,8 +103,11 @@ async def get_ai_sales_response(user_id: int, user_message: str, chat_history: l
         },
         "generationConfig": {
             "temperature": 0.7,
-            "maxOutputTokens": 1000,
-            "topP": 0.95
+            "maxOutputTokens": 4096,
+            "topP": 0.95,
+            "thinkingConfig": {
+                "thinkingBudget": 0
+            }
         }
     }
 
@@ -117,15 +120,19 @@ async def get_ai_sales_response(user_id: int, user_message: str, chat_history: l
                 async with session.post(
                     url,
                     json=payload,
-                    timeout=aiohttp.ClientTimeout(total=20)
+                    timeout=aiohttp.ClientTimeout(total=30)
                 ) as response:
                     if response.status == 200:
                         data = await response.json()
                         candidates = data.get("candidates", [])
                         if candidates and "content" in candidates[0]:
                             parts = candidates[0]["content"].get("parts", [])
-                            if parts and "text" in parts[0]:
-                                return parts[0]["text"].strip()
+                            # Barcha bo'laklarni (parts) to'liq yig'ish (chala qolmasligi uchun)
+                            text_pieces = [p["text"] for p in parts if not p.get("thought") and "text" in p]
+                            if text_pieces:
+                                full_reply = "".join(text_pieces).strip()
+                                if full_reply:
+                                    return full_reply
                     else:
                         resp_text = await response.text()
                         logger.warning(f"Model {model_name} status {response.status}: {resp_text[:200]}")
